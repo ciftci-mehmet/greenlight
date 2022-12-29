@@ -3,6 +3,7 @@ package data
 import (
 	"database/sql"
 	"errors"
+	"math"
 )
 
 // Define a custom ErrRecordNotFound error. We'll return this from our Get() method when
@@ -20,7 +21,7 @@ type Models struct {
 		Get(id int64) (*Movie, error)
 		Update(movie *Movie) error
 		Delete(id int64) error
-		GetAll(title string, genres []string, filters Filters) ([]*Movie, error)
+		GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error)
 	}
 }
 
@@ -55,14 +56,36 @@ func (m MockMovieModel) Delete(id int64) error {
 	return nil
 }
 
-func (m MockMovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+func (m MockMovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
 	// mock action
-	return nil, nil
+	return nil, Metadata{}, nil
 }
 
 // call NewMockModels() whenever you need it in your unit tests in place of the ‘real’ NewModels() function.
 func NewMockModels() Models {
 	return Models{
 		Movies: MockMovieModel{},
+	}
+}
+
+type Metadata struct {
+	CurrentPage  int `json:"current_page,omitempty"`
+	PageSize     int `json:"page_size,omitempty"`
+	FirstPage    int `json:"first_page,omitempty"`
+	LastPage     int `json:"last_page,omitempty"`
+	TotalRecords int `json:"total_records,omitempty"`
+}
+
+func calculateMetadata(totalRecords, page, pageSize int) Metadata {
+	if totalRecords == 0 {
+		return Metadata{}
+	}
+
+	return Metadata{
+		CurrentPage:  page,
+		PageSize:     pageSize,
+		FirstPage:    1,
+		LastPage:     int(math.Ceil(float64(totalRecords) / float64(pageSize))),
+		TotalRecords: totalRecords,
 	}
 }

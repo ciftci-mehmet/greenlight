@@ -181,9 +181,9 @@ func (m MovieModel) Delete(id int64) error {
 	return nil
 }
 
-func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
 	query := fmt.Sprintf(`
-		SELECT id, created_at, title, year, runtime, genres, version
+		SELECT count(*) OVER(), id, created_at, title, year, runtime, genres, version
 		FROM movies
 		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 		AND (genres @> $2 OR $2 = '{}')
@@ -196,11 +196,12 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 	// Use QueryContext() to execute the query. This returns a sql.Rows resultset containing the result.
 	rows, err := m.DB.QueryContext(ctx, query, title, pq.Array(genres), filters.limit(), filters.offset())
 	if err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 
 	defer rows.Close()
 
+	totalRecords := 0
 	movies := []*Movie{}
 
 	// Use rows.Next to iterate through the rows in the resultset.
@@ -208,6 +209,7 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 		var movie Movie
 
 		err := rows.Scan(
+			&totalRecords,
 			&movie.ID,
 			&movie.CreatedAt,
 			&movie.Title,
@@ -217,7 +219,7 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 			&movie.Version,
 		)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 
 		// Add the Movie struct to the slice.
@@ -227,9 +229,11 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 	// When the rows.Next() loop has finished, call rows.Err() to retrieve any error
 	// that was encountered during the iteration.
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+
 	// If everything went OK, then return the slice of movies.
-	return movies, nil
+	return movies, metadata, nil
 }
