@@ -20,6 +20,7 @@ type Models struct {
 		Get(id int64) (*Movie, error)
 		Update(movie *Movie) error
 		Delete(id int64) error
+		GetAll(title string, genres []string, filters Filters) ([]*Movie, error)
 	}
 }
 
@@ -52,6 +53,11 @@ func (m MockMovieModel) Update(movie *Movie) error {
 func (m MockMovieModel) Delete(id int64) error {
 	// mock action
 	return nil
+}
+
+func (m MockMovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+	// mock action
+	return nil, nil
 }
 
 // call NewMockModels() whenever you need it in your unit tests in place of the ‘real’ NewModels() function.
