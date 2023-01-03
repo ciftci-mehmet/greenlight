@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"flag"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ciftci-mehmet/greenlight/internal/data"
 	"github.com/ciftci-mehmet/greenlight/internal/jsonlog"
+	"github.com/ciftci-mehmet/greenlight/internal/mailer"
 	_ "github.com/lib/pq"
 )
 
@@ -29,12 +31,21 @@ type config struct {
 		burst   int
 		enabled bool
 	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 type application struct {
 	config config
 	logger *jsonlog.Logger
 	models data.Models
+	mailer mailer.Mailer
+	wg     sync.WaitGroup
 }
 
 func main() {
@@ -44,12 +55,7 @@ func main() {
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 
 	// add following line to $HOME/.profile or $HOME/.bashrc files
-	// export GREENLIGHT_DB_DSN='postgres://greenlight:pa55word@localhost/greenlight?sslmode=disable'
 	env_dsn := os.Getenv("GREENLIGHT_DB_DSN")
-	if env_dsn == "" {
-		env_dsn = "postgres://greenlight:pa55word@localhost/greenlight?sslmode=disable"
-	}
-	// Use the value of the GREENLIGHT_DB_DSN environment variable as the default value
 	// for our db-dsn command-line flag.
 	flag.StringVar(&cfg.db.dsn, "db-dsn", env_dsn, "PostgreSQL DSN")
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
@@ -59,6 +65,15 @@ func main() {
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+
+	// Read default mailtrap credentials from environment variables
+	mailTrapUser := os.Getenv("MAILTRAP_USER")
+	mailTrapPassword := os.Getenv("MAILTRAP_PASSWORD")
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 2525, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", mailTrapUser, "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", mailTrapPassword, "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@test.com>", "SMTP sender")
 
 	flag.Parse()
 
@@ -77,6 +92,7 @@ func main() {
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	err = app.serve()

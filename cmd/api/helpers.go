@@ -157,3 +157,24 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 	// return the converted integer value.
 	return i
 }
+
+func (app *application) background(fn func()) {
+	// increment WaitGroup counter
+	app.wg.Add(1)
+
+	// launch background func
+	go func() {
+		// defer to decrement WaitGroup counter
+		defer app.wg.Done()
+
+		// recover any panic
+		defer func() {
+			if err := recover(); err != nil {
+				app.logger.PrintError(fmt.Errorf("%s", err), nil)
+			}
+		}()
+
+		// execute parameter func
+		fn()
+	}()
+}
