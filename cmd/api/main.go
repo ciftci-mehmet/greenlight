@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"github.com/ciftci-mehmet/greenlight/internal/data"
 	"github.com/ciftci-mehmet/greenlight/internal/jsonlog"
 	"github.com/ciftci-mehmet/greenlight/internal/mailer"
+	"github.com/joho/godotenv"
+
 	_ "github.com/lib/pq"
 )
 
@@ -49,12 +52,16 @@ type application struct {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	var cfg config
 
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 
-	// add following line to $HOME/.profile or $HOME/.bashrc files
 	env_dsn := os.Getenv("GREENLIGHT_DB_DSN")
 	// for our db-dsn command-line flag.
 	flag.StringVar(&cfg.db.dsn, "db-dsn", env_dsn, "PostgreSQL DSN")

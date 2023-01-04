@@ -15,3 +15,5 @@
 # vendor/
 
 _postgres-data/
+
+.env
