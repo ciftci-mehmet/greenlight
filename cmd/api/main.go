@@ -86,6 +86,7 @@ func main() {
 	flag.StringVar(&cfg.smtp.password, "smtp-password", mailTrapPassword, "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@test.com>", "SMTP sender")
 
+	// go run ./cmd/api -cors-trusted-origins="http://localhost:9000 http://localhost:9001"
 	flag.Func("cors-trusted-origins", "Trusted CORS origins (space seperated)", func(val string) error {
 		cfg.cors.trustedOrigins = strings.Fields(val)
 		return nil
