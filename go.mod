@@ -10,6 +10,8 @@ require (
 	golang.org/x/time v0.3.0
 )
 
+require github.com/felixge/httpsnoop v1.0.2 // indirect
+
 require (
 	github.com/joho/godotenv v1.4.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
